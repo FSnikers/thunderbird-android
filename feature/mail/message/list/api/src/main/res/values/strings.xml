@@ -28,4 +28,8 @@
     <string name="swipe_action_spam">Spam</string>
     <string name="swipe_action_move">Move…</string>
     <string name="actionbar_selected">%d selected</string>
+    <string name="message_list_tab_mail">Mail</string>
+    <string name="message_list_tab_contacts">Contacts</string>
+    <string name="message_list_contacts_back">Back to contacts</string>
+    <string name="message_list_contacts_message_count">%d messages</string>
 </resources>
