@@ -1,5 +1,7 @@
 package net.thunderbird.feature.mail.message.list.internal.ui.component.template
 
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
@@ -8,17 +10,24 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.lifecycle.compose.LifecycleStartEffect
-import kotlinx.collections.immutable.ImmutableList
+import app.k9mail.core.ui.compose.designsystem.atom.text.TextBodyLarge
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import net.thunderbird.core.ui.compose.common.modifier.testTagAsResourceId
+import net.thunderbird.core.ui.compose.designsystem.atom.tab.TabPrimary
+import net.thunderbird.core.ui.compose.designsystem.molecule.tab.TabRowPrimary
+import net.thunderbird.feature.mail.message.list.R
 import net.thunderbird.feature.mail.message.list.internal.ui.component.MessageListItem
 import net.thunderbird.feature.mail.message.list.internal.ui.component.organism.MessageListFooter
 import net.thunderbird.feature.mail.message.list.internal.ui.component.organism.MessageListSwipeableItem
@@ -38,19 +47,99 @@ internal fun MessageListScope.MessageList(
     dispatchEvent: (MessageListEvent) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val listState = rememberMessageListLazyState(state, dispatchEvent)
+    var viewMode by remember { mutableStateOf(MessageListViewMode.Mail) }
+    var selectedSenderKey by remember(state.metadata.folder?.id) { mutableStateOf<String?>(null) }
+
+    Column(modifier = modifier.testTagAsResourceId(TEST_TAG_MESSAGE_LIST_ROOT)) {
+        MessageListTabs(
+            selected = viewMode,
+            onSelected = { selected ->
+                viewMode = selected
+                if (selected == MessageListViewMode.Mail) {
+                    selectedSenderKey = null
+                }
+            },
+        )
+
+        when (viewMode) {
+            MessageListViewMode.Mail -> MessageItems(
+                state = state,
+                messages = state.messages,
+                dispatchEvent = dispatchEvent,
+                modifier = Modifier.fillMaxSize(),
+                includeFooter = true,
+            )
+
+            MessageListViewMode.Contacts -> SenderGroupList(
+                messages = state.messages,
+                selectedSenderKey = selectedSenderKey,
+                onSenderClick = { senderKey -> selectedSenderKey = senderKey },
+                onBackToContacts = { selectedSenderKey = null },
+                senderMessagesContent = { senderMessages ->
+                    MessageItems(
+                        state = state,
+                        messages = senderMessages,
+                        dispatchEvent = dispatchEvent,
+                        modifier = Modifier.fillMaxSize(),
+                        includeFooter = false,
+                    )
+                },
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
+    }
+}
+
+@Composable
+private fun MessageListTabs(
+    selected: MessageListViewMode,
+    onSelected: (MessageListViewMode) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    TabRowPrimary(
+        selectedTabIndex = selected.ordinal,
+        modifier = modifier.fillMaxWidth(),
+    ) {
+        MessageListViewMode.entries.forEach { viewMode ->
+            TabPrimary(
+                selected = selected == viewMode,
+                title = {
+                    TextBodyLarge(
+                        text = stringResource(
+                            id = when (viewMode) {
+                                MessageListViewMode.Mail -> R.string.message_list_tab_mail
+                                MessageListViewMode.Contacts -> R.string.message_list_tab_contacts
+                            },
+                        ),
+                    )
+                },
+                onClick = { onSelected(viewMode) },
+            )
+        }
+    }
+}
+
+@Composable
+private fun MessageListScope.MessageItems(
+    state: MessageListState,
+    messages: List<MessageItemUi>,
+    dispatchEvent: (MessageListEvent) -> Unit,
+    includeFooter: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    val listState = rememberMessageListLazyState(state, dispatchEvent, pagingEnabled = includeFooter)
 
     val showAccountIndicator = state.metadata.showAccountIndicator
     val swipeActions = state.metadata.swipeActions
 
-    ScrollEventEffect(state.messages, listState)
+    ScrollEventEffect(messages, listState)
 
     LazyColumn(
-        modifier = modifier.testTagAsResourceId(TEST_TAG_MESSAGE_LIST_ROOT),
+        modifier = modifier,
         state = listState,
     ) {
         items(
-            items = state.messages,
+            items = messages,
             key = { message -> message.id },
         ) { message ->
             val messageSwipeActions = swipeActions[message.account.id]
@@ -72,8 +161,10 @@ internal fun MessageListScope.MessageList(
                 )
             }
         }
-        item {
-            MessageListFooter(state, dispatchEvent, Modifier.animateItem())
+        if (includeFooter) {
+            item {
+                MessageListFooter(state, dispatchEvent, Modifier.animateItem())
+            }
         }
     }
 }
@@ -82,11 +173,14 @@ internal fun MessageListScope.MessageList(
 private fun rememberMessageListLazyState(
     state: MessageListState,
     dispatchEvent: (MessageListEvent) -> Unit,
+    pagingEnabled: Boolean,
 ): LazyListState {
     val listState = rememberLazyListState()
     val latestPaging by rememberUpdatedState(state.metadata.paging)
 
-    LaunchedEffect(listState, state.metadata.folder?.id) {
+    LaunchedEffect(listState, state.metadata.folder?.id, pagingEnabled) {
+        if (!pagingEnabled) return@LaunchedEffect
+
         snapshotFlow {
             val total = listState.layoutInfo.totalItemsCount
             val lastVisible = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
@@ -111,7 +205,7 @@ private fun rememberMessageListLazyState(
 }
 
 private suspend fun LazyListState.scrollToMessage(
-    messages: ImmutableList<MessageItemUi>,
+    messages: List<MessageItemUi>,
     event: ScrollEvent.ScrollToMessage,
 ) {
     val (message, animated) = event
@@ -124,7 +218,7 @@ private suspend fun LazyListState.scrollToMessage(
 }
 
 @Composable
-private fun MessageListScope.ScrollEventEffect(messages: ImmutableList<MessageItemUi>, listState: LazyListState) {
+private fun MessageListScope.ScrollEventEffect(messages: List<MessageItemUi>, listState: LazyListState) {
     val currentMessages by rememberUpdatedState(messages)
 
     val scope = rememberCoroutineScope()

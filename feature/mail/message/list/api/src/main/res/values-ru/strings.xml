@@ -13,4 +13,8 @@
     <string name="swipe_action_spam">Отправить в спам</string>
     <string name="swipe_action_move">Переместить в…</string>
     <string name="actionbar_selected"><xliff:g id="selection_count">%d</xliff:g> выбрано</string>
+    <string name="message_list_tab_mail">Почта</string>
+    <string name="message_list_tab_contacts">Контакты</string>
+    <string name="message_list_contacts_back">Назад к контактам</string>
+    <string name="message_list_contacts_message_count"><xliff:g id="message_count">%d</xliff:g> сообщений</string>
 </resources>
