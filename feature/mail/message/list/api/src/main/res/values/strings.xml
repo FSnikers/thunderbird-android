@@ -28,4 +28,17 @@
     <string name="swipe_action_spam">Spam</string>
     <string name="swipe_action_move">Move…</string>
     <string name="actionbar_selected">%d selected</string>
+    <string name="message_list_tab_mail">Mail</string>
+    <string name="message_list_tab_contacts">Contacts</string>
+    <string name="message_list_contacts_back">Back to contacts</string>
+    <string name="message_list_contacts_message_count">%d messages</string>
+    <string name="message_list_mail_title">Inbox</string>
+    <string name="message_list_mail_description">A focused, chat-style view of the current folder.</string>
+    <string name="message_list_contacts_title">Contacts</string>
+    <string name="message_list_contacts_description">Browse this folder by sender.</string>
+    <string name="message_list_contacts_search_hint">Search contacts</string>
+    <string name="message_list_contacts_unknown_sender">Unknown sender</string>
+    <string name="message_list_contacts_empty_title">No contacts yet</string>
+    <string name="message_list_contacts_empty_search_title">No matching contacts</string>
+    <string name="message_list_contacts_empty_description">Senders will appear here when this folder has messages.</string>
 </resources>
