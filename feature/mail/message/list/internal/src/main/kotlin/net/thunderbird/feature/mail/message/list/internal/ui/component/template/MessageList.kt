@@ -1,8 +1,10 @@
 package net.thunderbird.feature.mail.message.list.internal.ui.component.template
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
@@ -21,12 +23,14 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.lifecycle.compose.LifecycleStartEffect
-import app.k9mail.core.ui.compose.designsystem.atom.text.TextBodyLarge
+import app.k9mail.core.ui.compose.designsystem.atom.button.ButtonSegmentedSingleChoice
+import app.k9mail.core.ui.compose.designsystem.atom.text.TextBodySmall
+import app.k9mail.core.ui.compose.designsystem.atom.text.TextTitleLarge
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import net.thunderbird.core.ui.compose.common.modifier.testTagAsResourceId
-import net.thunderbird.core.ui.compose.designsystem.atom.tab.TabPrimary
-import net.thunderbird.core.ui.compose.designsystem.molecule.tab.TabRowPrimary
+import net.thunderbird.core.ui.compose.theme2.MainTheme
 import net.thunderbird.feature.mail.message.list.R
 import net.thunderbird.feature.mail.message.list.internal.ui.component.MessageListItem
 import net.thunderbird.feature.mail.message.list.internal.ui.component.organism.MessageListFooter
@@ -50,8 +54,12 @@ internal fun MessageListScope.MessageList(
     var viewMode by remember { mutableStateOf(MessageListViewMode.Mail) }
     var selectedSenderKey by remember(state.metadata.folder?.id) { mutableStateOf<String?>(null) }
 
-    Column(modifier = modifier.testTagAsResourceId(TEST_TAG_MESSAGE_LIST_ROOT)) {
-        MessageListTabs(
+    Column(
+        modifier = modifier
+            .background(MainTheme.colors.surfaceContainerLowest)
+            .testTagAsResourceId(TEST_TAG_MESSAGE_LIST_ROOT),
+    ) {
+        MessageListHeader(
             selected = viewMode,
             onSelected = { selected ->
                 viewMode = selected
@@ -59,6 +67,9 @@ internal fun MessageListScope.MessageList(
                     selectedSenderKey = null
                 }
             },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(MainTheme.spacings.default),
         )
 
         when (viewMode) {
@@ -91,31 +102,45 @@ internal fun MessageListScope.MessageList(
 }
 
 @Composable
-private fun MessageListTabs(
+private fun MessageListHeader(
     selected: MessageListViewMode,
     onSelected: (MessageListViewMode) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    TabRowPrimary(
-        selectedTabIndex = selected.ordinal,
-        modifier = modifier.fillMaxWidth(),
-    ) {
-        MessageListViewMode.entries.forEach { viewMode ->
-            TabPrimary(
-                selected = selected == viewMode,
-                title = {
-                    TextBodyLarge(
-                        text = stringResource(
-                            id = when (viewMode) {
-                                MessageListViewMode.Mail -> R.string.message_list_tab_mail
-                                MessageListViewMode.Contacts -> R.string.message_list_tab_contacts
-                            },
-                        ),
-                    )
+    val mailTabTitle = stringResource(id = R.string.message_list_tab_mail)
+    val contactsTabTitle = stringResource(id = R.string.message_list_tab_contacts)
+
+    Column(modifier = modifier) {
+        TextTitleLarge(
+            text = stringResource(
+                id = when (selected) {
+                    MessageListViewMode.Mail -> R.string.message_list_mail_title
+                    MessageListViewMode.Contacts -> R.string.message_list_contacts_title
                 },
-                onClick = { onSelected(viewMode) },
-            )
-        }
+            ),
+        )
+        TextBodySmall(
+            text = stringResource(
+                id = when (selected) {
+                    MessageListViewMode.Mail -> R.string.message_list_mail_description
+                    MessageListViewMode.Contacts -> R.string.message_list_contacts_description
+                },
+            ),
+            color = MainTheme.colors.onSurfaceVariant,
+            modifier = Modifier.padding(top = MainTheme.spacings.quarter, bottom = MainTheme.spacings.default),
+        )
+        ButtonSegmentedSingleChoice(
+            selectedOption = selected,
+            options = persistentListOf(MessageListViewMode.Mail, MessageListViewMode.Contacts),
+            optionTitle = { viewMode ->
+                when (viewMode) {
+                    MessageListViewMode.Mail -> mailTabTitle
+                    MessageListViewMode.Contacts -> contactsTabTitle
+                }
+            },
+            onClick = onSelected,
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }
 

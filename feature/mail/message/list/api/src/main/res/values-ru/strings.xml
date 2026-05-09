@@ -17,4 +17,13 @@
     <string name="message_list_tab_contacts">Контакты</string>
     <string name="message_list_contacts_back">Назад к контактам</string>
     <string name="message_list_contacts_message_count"><xliff:g id="message_count">%d</xliff:g> сообщений</string>
+    <string name="message_list_mail_title">Входящие</string>
+    <string name="message_list_mail_description">Сфокусированный список текущей папки в стиле чата.</string>
+    <string name="message_list_contacts_title">Контакты</string>
+    <string name="message_list_contacts_description">Просматривайте эту папку по отправителям.</string>
+    <string name="message_list_contacts_search_hint">Поиск контактов</string>
+    <string name="message_list_contacts_unknown_sender">Неизвестный отправитель</string>
+    <string name="message_list_contacts_empty_title">Контактов пока нет</string>
+    <string name="message_list_contacts_empty_search_title">Подходящих контактов нет</string>
+    <string name="message_list_contacts_empty_description">Отправители появятся здесь, когда в этой папке будут сообщения.</string>
 </resources>

@@ -11,9 +11,14 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.k9mail.core.ui.compose.designsystem.atom.card.CardDefaults
@@ -22,10 +27,13 @@ import app.k9mail.core.ui.compose.designsystem.atom.text.TextBodyMedium
 import app.k9mail.core.ui.compose.designsystem.atom.text.TextBodySmall
 import app.k9mail.core.ui.compose.designsystem.atom.text.TextLabelSmall
 import app.k9mail.core.ui.compose.designsystem.atom.text.TextTitleMedium
+import app.k9mail.core.ui.compose.designsystem.atom.text.TextTitleSmall
+import app.k9mail.core.ui.compose.designsystem.atom.textfield.TextFieldOutlined
 import net.thunderbird.core.ui.compose.theme2.MainTheme
 import net.thunderbird.feature.mail.message.list.R
 import net.thunderbird.feature.mail.message.list.internal.ui.component.MessageItemAvatar
 import net.thunderbird.feature.mail.message.list.internal.ui.component.SenderMessageGroup
+import net.thunderbird.feature.mail.message.list.internal.ui.component.filterSenderGroups
 import net.thunderbird.feature.mail.message.list.internal.ui.component.groupMessagesBySender
 import net.thunderbird.feature.mail.message.list.ui.state.Avatar
 import net.thunderbird.feature.mail.message.list.ui.state.MessageItemUi
@@ -39,7 +47,10 @@ internal fun SenderGroupList(
     senderMessagesContent: @Composable (List<MessageItemUi>) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val senderGroups = groupMessagesBySender(messages)
+    val senderGroups = groupMessagesBySender(
+        messages = messages,
+        unknownSenderName = stringResource(id = R.string.message_list_contacts_unknown_sender),
+    )
     val selectedSenderGroup = selectedSenderKey?.let { senderKey ->
         senderGroups.firstOrNull { it.senderKey == senderKey }
     }
@@ -53,22 +64,112 @@ internal fun SenderGroupList(
             senderMessagesContent(selectedSenderGroup.messages)
         }
     } else {
-        LazyColumn(modifier = modifier.fillMaxSize()) {
-            items(
-                items = senderGroups,
-                key = { senderGroup -> senderGroup.senderKey },
-            ) { senderGroup ->
-                SenderGroupItem(
-                    senderGroup = senderGroup,
-                    onClick = { onSenderClick(senderGroup.senderKey) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(
-                            horizontal = MainTheme.spacings.default,
-                            vertical = MainTheme.spacings.half,
-                        ),
-                )
+        SenderGroupOverview(
+            senderGroups = senderGroups,
+            onSenderClick = onSenderClick,
+            modifier = modifier,
+        )
+    }
+}
+
+@Composable
+private fun SenderGroupOverview(
+    senderGroups: List<SenderMessageGroup>,
+    onSenderClick: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var searchQuery by remember { mutableStateOf("") }
+    val filteredSenderGroups = filterSenderGroups(senderGroups, searchQuery)
+
+    Column(modifier = modifier.fillMaxSize()) {
+        ContactsSearchHeader(
+            searchQuery = searchQuery,
+            onSearchQueryChange = { searchQuery = it },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(MainTheme.spacings.default),
+        )
+
+        if (filteredSenderGroups.isEmpty()) {
+            ContactsEmptyState(
+                hasSearchQuery = searchQuery.isNotBlank(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(MainTheme.spacings.default),
+            )
+        } else {
+            LazyColumn(modifier = Modifier.fillMaxSize()) {
+                items(
+                    items = filteredSenderGroups,
+                    key = { senderGroup -> senderGroup.senderKey },
+                ) { senderGroup ->
+                    SenderGroupItem(
+                        senderGroup = senderGroup,
+                        onClick = { onSenderClick(senderGroup.senderKey) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(
+                                horizontal = MainTheme.spacings.default,
+                                vertical = MainTheme.spacings.half,
+                            ),
+                    )
+                }
             }
+        }
+    }
+}
+
+@Composable
+private fun ContactsSearchHeader(
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        verticalArrangement = Arrangement.spacedBy(MainTheme.spacings.half),
+        modifier = modifier,
+    ) {
+        TextFieldOutlined(
+            value = searchQuery,
+            onValueChange = onSearchQueryChange,
+            label = stringResource(id = R.string.message_list_contacts_search_hint),
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
+}
+
+@Composable
+private fun ContactsEmptyState(
+    hasSearchQuery: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    CardFilled(
+        modifier = modifier,
+        colors = CardDefaults.cardColors(containerColor = MainTheme.colors.surfaceContainerLow),
+        shape = MainTheme.shapes.large,
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(MainTheme.spacings.half),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(MainTheme.spacings.double),
+        ) {
+            TextTitleSmall(
+                text = stringResource(
+                    id = if (hasSearchQuery) {
+                        R.string.message_list_contacts_empty_search_title
+                    } else {
+                        R.string.message_list_contacts_empty_title
+                    },
+                ),
+                textAlign = TextAlign.Center,
+            )
+            TextBodySmall(
+                text = stringResource(id = R.string.message_list_contacts_empty_description),
+                color = MainTheme.colors.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
         }
     }
 }

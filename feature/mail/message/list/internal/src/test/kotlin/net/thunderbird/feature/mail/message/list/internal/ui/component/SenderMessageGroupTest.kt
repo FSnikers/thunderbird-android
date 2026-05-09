@@ -25,9 +25,10 @@ class SenderMessageGroupTest {
             createMessage(id = "2", sender = "alice", state = MessageItemUi.State.Read),
             createMessage(id = "3", sender = "Bob", state = MessageItemUi.State.Read),
         )
+        val testSubject = ::groupMessagesBySender
 
         // Act
-        val result = groupMessagesBySender(messages)
+        val result = testSubject(messages, UNKNOWN_SENDER)
 
         // Assert
         assertThat(result.map { it.displayName }).containsExactly("Alice", "Bob")
@@ -43,25 +44,63 @@ class SenderMessageGroupTest {
             createMessage(id = "2", sender = "Alice", state = MessageItemUi.State.Unread),
             createMessage(id = "3", sender = "Charlie", state = MessageItemUi.State.New),
         )
+        val testSubject = ::groupMessagesBySender
 
         // Act
-        val result = groupMessagesBySender(messages)
+        val result = testSubject(messages, UNKNOWN_SENDER)
 
         // Assert
         assertThat(result.map { it.displayName }).containsExactly("Alice", "Charlie", "Bob")
     }
 
+    @Test
+    fun `GIVEN blank sender WHEN grouping by sender THEN unknown sender label is used`() {
+        // Arrange
+        val messages = listOf(
+            createMessage(id = "1", sender = " ", state = MessageItemUi.State.Read),
+        )
+        val testSubject = ::groupMessagesBySender
+
+        // Act
+        val result = testSubject(messages, UNKNOWN_SENDER)
+
+        // Assert
+        assertThat(result.first().displayName).isEqualTo(UNKNOWN_SENDER)
+    }
+
+    @Test
+    fun `GIVEN sender groups WHEN filtering THEN sender name and latest subject are matched`() {
+        // Arrange
+        val senderGroups = groupMessagesBySender(
+            messages = listOf(
+                createMessage(id = "1", sender = "Alice", subject = "Project Update"),
+                createMessage(id = "2", sender = "Bob", subject = "Invoice"),
+            ),
+            unknownSenderName = UNKNOWN_SENDER,
+        )
+        val testSubject = ::filterSenderGroups
+
+        // Act
+        val senderMatch = testSubject(senderGroups, "ali")
+        val subjectMatch = testSubject(senderGroups, "invoice")
+
+        // Assert
+        assertThat(senderMatch.map { it.displayName }).containsExactly("Alice")
+        assertThat(subjectMatch.map { it.displayName }).containsExactly("Bob")
+    }
+
     private fun createMessage(
         id: String,
         sender: String,
-        state: MessageItemUi.State,
+        state: MessageItemUi.State = MessageItemUi.State.Read,
+        subject: String = "Subject $id",
     ): MessageItemUi {
         return MessageItemUi(
             state = state,
             id = id,
             account = account,
             senders = ComposedAddressUi(displayName = sender),
-            subject = "Subject $id",
+            subject = subject,
             excerpt = "Excerpt $id",
             formattedReceivedAt = "Now",
             hasAttachments = false,
@@ -71,5 +110,9 @@ class SenderMessageGroupTest {
             forwarded = false,
             selected = false,
         )
+    }
+
+    private companion object {
+        const val UNKNOWN_SENDER = "Unknown sender"
     }
 }
